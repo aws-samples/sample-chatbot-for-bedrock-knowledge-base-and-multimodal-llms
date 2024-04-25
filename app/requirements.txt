@@ -1,6 +1,4 @@
 boto3
 streamlit
-langchain-core
-langchain-community
 opensearch-py
 retrying

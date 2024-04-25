@@ -2,9 +2,6 @@ from typing import Optional
 import base64
 import json
 
-from langchain_core.documents import Document
-from langchain_community.retrievers import AmazonKnowledgeBasesRetriever
-
 
 class BedrockHandler:
     def __init__(self, client, model_id, params):
@@ -78,36 +75,30 @@ class BedrockHandler:
 
 
 class KBHandler:
-    def __init__(self, client, region: str, kb_params: dict, kb_id: Optional[str] = None) -> None:
+    def __init__(self, client, kb_params: dict, kb_id: Optional[str] = None) -> None:
         self.client = client
         self.kb_id = kb_id
-        self.region = region
         self.params = kb_params
-        if self.kb_id:
-            self.retriever = self._init_retriever()
-        else:
-            self.retriever = None
-        
-    def _init_retriever(self):
-        return AmazonKnowledgeBasesRetriever(
-            knowledge_base_id=self.kb_id,
-            retrieval_config=self.params,
-            region_name=self.region,
 
-        )
-    
-    def get_relevant_docs(self, prompt: str) -> Optional[list[Document]]:
-        return self.retriever._get_relevant_documents(prompt, run_manager=None) if self.retriever else []
+    def get_relevant_docs(self, prompt: str) -> list[dict]:
+        return self.client.retrieve(
+                retrievalQuery= {
+                    'text': prompt
+                },
+                knowledgeBaseId=self.kb_id,
+                retrievalConfiguration= self.params
+        )["retrievalResults"] if self.kb_id else []
 
     @staticmethod
-    def parse_kb_output_to_string(docs: list[Document]) -> str:
-        return "\n\n".join(f"Document {i + 1}: {doc.page_content}" for i, doc in enumerate(docs))
+    def parse_kb_output_to_string(docs: list[dict]) -> str:
+        return "\n\n".join(f"Document {i + 1}: {doc['content']['text']}" for i, doc in enumerate(docs))
 
     @staticmethod
-    def parse_kb_output_to_reference(docs: list[Document]) -> dict:
+    def parse_kb_output_to_reference(docs: list[dict]) -> dict:
         return {
             f"Document {i + 1}": {
-                "text": doc.page_content,
-                "metadata": doc.metadata
+                "text": doc["content"]["text"],
+                "metadata": doc["location"],
+                "score": doc["score"]
             } for i, doc in enumerate(docs)
         }
