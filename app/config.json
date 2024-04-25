@@ -1,0 +1,12 @@
+{
+    "page_title": "IFX GenAI Tech support",
+    "start_message": "I am a GenAI bot with Infineon Aurex expertise, how can I help you?",
+    "bedrock_region": "us-west-2",
+    "claude_model_params": {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 4096,
+        "temperature": 0.0,
+        "top_k": 100
+    },
+    "kb_configs": {"vectorSearchConfiguration": {"numberOfResults": 5}}
+}
