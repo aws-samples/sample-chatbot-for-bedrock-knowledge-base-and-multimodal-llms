@@ -13,7 +13,6 @@ suffix = random.randrange(200, 900)
 region_name = os.environ.get("AWS_DEFAULT_REGION", "us-west-2")
 boto3.setup_default_session(region_name=region_name)
 boto3_session = boto3.session.Session()
-print(f"Region name in os_roles: {region_name}")
 iam_client = boto3_session.client("iam")
 account_number = boto3.client("sts").get_caller_identity().get("Account")
 identity = boto3.client("sts").get_caller_identity()["Arn"]

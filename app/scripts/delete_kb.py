@@ -4,17 +4,22 @@ This file is copied from: https://github.com/aws-samples/amazon-bedrock-workshop
 
 import json
 import boto3
-from app.utils.opensearch_roles import create_os_client, delete_iam_role_and_policies
+import sys
+import os
+sys.path.append("..")  # Add the parent directory to the Python path
+from utils.opensearch_roles import create_os_client
+
 
 with open("kb_info.json") as f:
     kb_info = json.load(f)
 
+os.environ["AWS_DEFAULT_REGION"] = kb_info["region_name"]
 boto3_session = boto3.session.Session()
 bedrock_agent_client = boto3_session.client(
     "bedrock-agent", region_name=kb_info["region_name"]
 )
 s3_client = boto3.client("s3")
-oss_client = create_os_client(kb_info["kb_info"], kb_info["region_name"])
+oss_client = create_os_client(kb_info["collection_id"], kb_info["region_name"])
 aoss_client = boto3_session.client("opensearchserverless")
 
 bedrock_agent_client.delete_data_source(
@@ -29,7 +34,6 @@ aoss_client.delete_security_policy(
     type="encryption", name=kb_info["encryption_policy_name"]
 )
 
-delete_iam_role_and_policies()
 bucket_name = kb_info["bucket_name"]
 objects = s3_client.list_objects(Bucket=bucket_name)
 if "Contents" in objects:
