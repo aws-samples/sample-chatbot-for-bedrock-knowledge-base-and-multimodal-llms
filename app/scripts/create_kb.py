@@ -33,7 +33,7 @@ sys.path.append("..")  # Add the parent directory to the Python path
 
 
 parser = argparse.ArgumentParser(
-    description="Create and ingest documents into a knowledge base"
+    description="Create and ingest documents into a knowledge base, by default files will be copied from ../data directory to the provided S3 location"
 )
 parser.add_argument(
     "--region_name",
@@ -52,10 +52,10 @@ parser.add_argument(
     help="S3 Bucket name that should save the data",
 )
 parser.add_argument(
-    "--copy_from_local",
+    "--use_s3",
     required=False,
-    help="If set, files are copied from `data` directory to the S3 bucket",
-    default=True,
+    help="If set, we use the files in the provided S3 location without copying ../data location",
+    default=False,
 )
 parser.add_argument(
     "--vectorstore_name",
@@ -203,7 +203,7 @@ def uploadDirectory(path, bucket_name):
 
 
 data_root = "../data/"
-if args.copy_from_local:
+if not args.use_s3:
     uploadDirectory(data_root, bucket_name)
 
 opensearchServerlessConfiguration = {
