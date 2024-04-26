@@ -23,23 +23,23 @@ pip install -r requirements.txt
 python scripts/create_kb.py --help 
 ```
 In that case, you would need to have an AWS Role with the follwoing Policies:
-    * IAMFullAccess
-    * AWSLambda_FullAccess
-    * AmazonS3FullAccess
-    * AmazonBedrockFullAccess
-    * Custom policy for Amazon OpenSearch Serverless such as
-    ```
-    {
-                "Version": "2012-10-17",
-                "Statement": [
-                    {
-                        "Effect": "Allow",
-                        "Action": "aoss:*",
-                        "Resource": "*"
-                    }
-                ]
-            }
-    ```
+* IAMFullAccess
+* AWSLambda_FullAccess
+* AmazonS3FullAccess
+* AmazonBedrockFullAccess
+* Custom policy for Amazon OpenSearch Serverless such as
+```
+{
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Action": "aoss:*",
+                    "Resource": "*"
+                }
+            ]
+        }
+```
 
 ## Usage
 
