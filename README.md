@@ -2,6 +2,10 @@
 
 This project is a Streamlit application that combines the capabilities of Bedrock knowledge bases with multimodal language models (LLMs). The application allows users to ask questions and receive relevant responses based on the selected knowledge base and multimodal LLM model. Users can also upload images to supplement their queries.
 
+![Alt Text](doc/demo.gif)
+
+
+
 ## Installation
 
 1. Clone the repository:
