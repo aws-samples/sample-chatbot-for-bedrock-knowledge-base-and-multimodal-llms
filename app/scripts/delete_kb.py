@@ -6,6 +6,7 @@ import json
 import boto3
 import sys
 import os
+
 sys.path.append("..")  # Add the parent directory to the Python path
 from utils.opensearch_roles import create_os_client
 

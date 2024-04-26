@@ -6,13 +6,23 @@ from utils.bedrock import BedrockHandler, KBHandler
 
 # Clear Chat History function
 def clear_screen():
+    """Clear the chat history and reset the messages."""
     st.session_state.messages = [
         {"role": "assistant", "content": configs["start_message"]}
     ]
     bedrock_handler.messages = []
 
 
-def get_all_kbs(all_kb: dict) -> dict:
+def get_all_kbs(all_kb: dict) -> dict[str, str]:
+    """
+    Extract knowledge base names and IDs from the response.
+
+    Args:
+        all_kb (dict): The response from the list_knowledge_bases API call.
+
+    Returns:
+        Dict[str, str]: A dictionary mapping knowledge base names to their IDs.
+    """
     result = {}
     for kb in all_kb["knowledgeBaseSummaries"]:
         result[kb["name"]] = kb["knowledgeBaseId"]
