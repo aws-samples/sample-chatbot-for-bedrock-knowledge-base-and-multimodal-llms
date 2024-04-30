@@ -1,0 +1,17 @@
+* IAMFullAccess
+* AWSLambda_FullAccess
+* AmazonS3FullAccess
+* AmazonBedrockFullAccess
+* Custom policy for Amazon OpenSearch Serverless such as
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "aoss:*",
+            "Resource": "*"
+        }
+    ]
+}
+```

@@ -1,16 +1,13 @@
-"""
-This class is copied from https://github.com/aws-samples/amazon-bedrock-workshop/blob/main/02_KnowledgeBases_and_RAG/utility.py
-"""
-
 import json
 import random
 import time
 import boto3
+from typing import Optional
 from pydantic import BaseModel
 from opensearchpy import AWSV4SignerAuth, OpenSearch, RequestsHttpConnection
 
 
-def interactive_sleep(seconds: int):
+def interactive_sleep(seconds: int) -> None:
     dots = ""
     for i in range(seconds):
         dots += "."
@@ -20,6 +17,9 @@ def interactive_sleep(seconds: int):
 
 
 class KBInfo(BaseModel):
+    """
+    A class that saves all the resources names created when a Bedrock KB is created. Can be used later for deletion
+    """
     ds_id: str = ""
     kb_id: str = ""
     index_name: str = ""
@@ -29,10 +29,21 @@ class KBInfo(BaseModel):
     encryption_policy_name: str = ""
     bucket_name: str = ""
     region_name: str = ""
+    bedrock_execution_role_name: str = ""
+    fm_policy_name: str = ""
+    s3_policy_name: str = ""
+    oss_policy_name: str = ""
 
 
 class KnowledgeBaseRoles:
-    def __init__(self, region_name: str) -> None:
+    def __init__(
+        self,
+        region_name: str,
+        bedrock_execution_role_name: Optional[str] = None,
+        fm_policy_name: Optional[str] = None,
+        s3_policy_name: Optional[str] = None,
+        oss_policy_name: Optional[str] = None,
+    ) -> None:
         self.suffix = random.randrange(200, 900)
         self.region_name = region_name
         self.boto3_session = boto3.session.Session(region_name=self.region_name)
@@ -41,13 +52,25 @@ class KnowledgeBaseRoles:
         self.identity = boto3.client("sts").get_caller_identity()["Arn"]
 
         self.bedrock_execution_role_name = (
-            f"AmazonBedrockExecutionRoleForKnowledgeBase_{self.suffix}"
+            (f"AmazonBedrockExecutionRoleForKnowledgeBase_{self.suffix}")
+            if not bedrock_execution_role_name
+            else bedrock_execution_role_name
         )
         self.fm_policy_name = (
-            f"AmazonBedrockFoundationModelPolicyForKnowledgeBase_{self.suffix}"
+            (f"AmazonBedrockFoundationModelPolicyForKnowledgeBase_{self.suffix}")
+            if not fm_policy_name
+            else fm_policy_name
         )
-        self.s3_policy_name = f"AmazonBedrockS3PolicyForKnowledgeBase_{self.suffix}"
-        self.oss_policy_name = f"AmazonBedrockOSSPolicyForKnowledgeBase_{self.suffix}"
+        self.s3_policy_name = (
+            f"AmazonBedrockS3PolicyForKnowledgeBase_{self.suffix}"
+            if not s3_policy_name
+            else s3_policy_name
+        )
+        self.oss_policy_name = (
+            f"AmazonBedrockOSSPolicyForKnowledgeBase_{self.suffix}"
+            if not oss_policy_name
+            else oss_policy_name
+        )
 
     def create_bedrock_execution_role(
         self, bucket_name: str
@@ -271,6 +294,9 @@ class KnowledgeBaseRoles:
         return encryption_policy, network_policy, access_policy
 
     def delete_iam_role_and_policies(self) -> None:
+        """
+        Deletes the IAM roles and polices created earlier
+        """
         fm_policy_arn = (
             f"arn:aws:iam::{self.account_number}:policy/{self.fm_policy_name}"
         )

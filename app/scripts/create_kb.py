@@ -1,23 +1,3 @@
-"""
-This class is mostly copied from: https://github.com/aws-samples/amazon-bedrock-workshop/blob/main/02_KnowledgeBases_and_RAG/0_create_ingest_documents_test_kb.ipynb
-Note: you need to have the following polices in order to be able to activate this code:
-* IAMFullAccess
-* AWSLambda_FullAccess
-* AmazonS3FullAccess
-* AmazonBedrockFullAccess
-* Custom policy for Amazon OpenSearch Serverless such as:
-        {
-            "Version": "2012-10-17",
-            "Statement": [
-                {
-                    "Effect": "Allow",
-                    "Action": "aoss:*",
-                    "Resource": "*"
-                }
-            ]
-        }
-"""
-
 import json
 import os
 import boto3
@@ -42,6 +22,16 @@ class NotSupportedRegionException(Exception):
 
 
 class CreateKB:
+    """
+    Creates Bedrock KnoweldgeBase with all the required steps
+    Args:
+        region_name (str): name of the AWS region
+        bucket_name (str): name of the S3 bucket that will be used as a data source
+        index_name (str): name of the OpenSearch index
+        kb_name (str): name of the KnowledgeBase data source
+        vector_store_name (str): name of the vector stote
+    """
+
     def __init__(
         self,
         region_name: str,
@@ -61,6 +51,10 @@ class CreateKB:
             index_name=self.index_name,
             bucket_name=self.bucket_name,
             region_name=self.region_name,
+            bedrock_execution_role_name=self.kb_roles.bedrock_execution_role_name,
+            fm_policy_name=self.kb_roles.fm_policy_name,
+            s3_policy_name=self.kb_roles.s3_policy_name,
+            oss_policy_name=self.kb_roles.oss_policy_name,
         )
 
     def create_bucket(self, s3_client: boto3.client) -> None:
@@ -119,8 +113,12 @@ class CreateKB:
             )
         )
         self.kb_info.access_policy_name = access_policy["accessPolicyDetail"]["name"]
-        self.kb_info.network_policy_name = network_policy["securityPolicyDetail"]["name"]
-        self.kb_info.encryption_policy_name = encryption_policy["securityPolicyDetail"]["name"]
+        self.kb_info.network_policy_name = network_policy["securityPolicyDetail"][
+            "name"
+        ]
+        self.kb_info.encryption_policy_name = encryption_policy["securityPolicyDetail"][
+            "name"
+        ]
 
         collection = aoss_client.create_collection(
             name=self.vector_store_name, type="VECTORSEARCH"
