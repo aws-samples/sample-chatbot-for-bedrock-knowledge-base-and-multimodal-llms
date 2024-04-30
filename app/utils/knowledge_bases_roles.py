@@ -3,10 +3,10 @@ This class is copied from https://github.com/aws-samples/amazon-bedrock-workshop
 """
 
 import json
-import os
 import random
 import time
 import boto3
+from pydantic import BaseModel
 from opensearchpy import AWSV4SignerAuth, OpenSearch, RequestsHttpConnection
 
 
@@ -19,6 +19,18 @@ def interactive_sleep(seconds: int):
     print("Done!")
 
 
+class KBInfo(BaseModel):
+    ds_id: str = ""
+    kb_id: str = ""
+    index_name: str = ""
+    collection_id: str = ""
+    access_policy_name: str = ""
+    network_policy_name: str = ""
+    encryption_policy_name: str = ""
+    bucket_name: str = ""
+    region_name: str = ""
+
+
 class KnowledgeBaseRoles:
     def __init__(self, region_name: str) -> None:
         self.suffix = random.randrange(200, 900)
@@ -28,13 +40,18 @@ class KnowledgeBaseRoles:
         self.account_number = boto3.client("sts").get_caller_identity().get("Account")
         self.identity = boto3.client("sts").get_caller_identity()["Arn"]
 
-        self.bedrock_execution_role_name = f"AmazonBedrockExecutionRoleForKnowledgeBase_{self.suffix}"
-        self.fm_policy_name = f"AmazonBedrockFoundationModelPolicyForKnowledgeBase_{self.suffix}"
+        self.bedrock_execution_role_name = (
+            f"AmazonBedrockExecutionRoleForKnowledgeBase_{self.suffix}"
+        )
+        self.fm_policy_name = (
+            f"AmazonBedrockFoundationModelPolicyForKnowledgeBase_{self.suffix}"
+        )
         self.s3_policy_name = f"AmazonBedrockS3PolicyForKnowledgeBase_{self.suffix}"
         self.oss_policy_name = f"AmazonBedrockOSSPolicyForKnowledgeBase_{self.suffix}"
 
-
-    def create_bedrock_execution_role(self, bucket_name: str) -> dict[str, dict[str, str]]:
+    def create_bedrock_execution_role(
+        self, bucket_name: str
+    ) -> dict[str, dict[str, str]]:
         """
         Create an IAM role with necessary policies for Amazon Bedrock Knowledge Base Execution.
 
@@ -70,7 +87,9 @@ class KnowledgeBaseRoles:
                         f"arn:aws:s3:::{bucket_name}/*",
                     ],
                     "Condition": {
-                        "StringEquals": {"aws:ResourceAccount": f"{self.account_number}"}
+                        "StringEquals": {
+                            "aws:ResourceAccount": f"{self.account_number}"
+                        }
                     },
                 }
             ],
@@ -114,13 +133,14 @@ class KnowledgeBaseRoles:
 
         # attach policies to Amazon Bedrock execution role
         self.iam_client.attach_role_policy(
-            RoleName=bedrock_kb_execution_role["Role"]["RoleName"], PolicyArn=fm_policy_arn
+            RoleName=bedrock_kb_execution_role["Role"]["RoleName"],
+            PolicyArn=fm_policy_arn,
         )
         self.iam_client.attach_role_policy(
-            RoleName=bedrock_kb_execution_role["Role"]["RoleName"], PolicyArn=s3_policy_arn
+            RoleName=bedrock_kb_execution_role["Role"]["RoleName"],
+            PolicyArn=s3_policy_arn,
         )
         return bedrock_kb_execution_role
-
 
     def create_oss_policy_attach_bedrock_execution_role(
         self, collection_id: str, bedrock_kb_execution_role: dict[str, dict[str, str]]
@@ -154,9 +174,9 @@ class KnowledgeBaseRoles:
         print("Opensearch serverless arn: ", oss_policy_arn)
 
         self.iam_client.attach_role_policy(
-            RoleName=bedrock_kb_execution_role["Role"]["RoleName"], PolicyArn=oss_policy_arn
+            RoleName=bedrock_kb_execution_role["Role"]["RoleName"],
+            PolicyArn=oss_policy_arn,
         )
-
 
     def create_policies_in_oss(
         self,
@@ -250,12 +270,16 @@ class KnowledgeBaseRoles:
         )
         return encryption_policy, network_policy, access_policy
 
-
-
     def delete_iam_role_and_policies(self) -> None:
-        fm_policy_arn = f"arn:aws:iam::{self.account_number}:policy/{self.fm_policy_name}"
-        s3_policy_arn = f"arn:aws:iam::{self.account_number}:policy/{self.s3_policy_name}"
-        oss_policy_arn = f"arn:aws:iam::{self.account_number}:policy/{self.oss_policy_name}"
+        fm_policy_arn = (
+            f"arn:aws:iam::{self.account_number}:policy/{self.fm_policy_name}"
+        )
+        s3_policy_arn = (
+            f"arn:aws:iam::{self.account_number}:policy/{self.s3_policy_name}"
+        )
+        oss_policy_arn = (
+            f"arn:aws:iam::{self.account_number}:policy/{self.oss_policy_name}"
+        )
         self.iam_client.detach_role_policy(
             RoleName=self.bedrock_execution_role_name, PolicyArn=s3_policy_arn
         )
@@ -270,7 +294,6 @@ class KnowledgeBaseRoles:
         self.iam_client.delete_policy(PolicyArn=fm_policy_arn)
         self.iam_client.delete_policy(PolicyArn=oss_policy_arn)
         return 0
-
 
     def create_os_client(self, collection_id: str):
         host = collection_id + "." + self.region_name + ".aoss.amazonaws.com"

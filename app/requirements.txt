@@ -2,3 +2,4 @@ boto3
 streamlit
 opensearch-py
 retrying
+pydantic
