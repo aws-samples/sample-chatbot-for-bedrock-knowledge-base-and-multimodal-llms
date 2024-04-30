@@ -36,6 +36,12 @@ In that case, you would need to have an AWS Role with the follwoing polices [her
 
 If you want to upload documents from local to the KnowledgeBase, add the documents to `app/data` folder. Otherwise, you can also specify a custom S3 bucket name to the `create_kb.py` script.
 
+5. [Optional] You can delete the created knowledgeBase from setp 4 with the following script:
+```
+cd app/scripts
+python delete_kb.py
+```
+
 ## Usage
 1. Ensure your terminal session can access the AWS account via SSO, environment variables or any mechanism you use
 

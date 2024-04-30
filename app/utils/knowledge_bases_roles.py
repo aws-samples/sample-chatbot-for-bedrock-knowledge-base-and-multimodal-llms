@@ -20,6 +20,7 @@ class KBInfo(BaseModel):
     """
     A class that saves all the resources names created when a Bedrock KB is created. Can be used later for deletion
     """
+
     ds_id: str = ""
     kb_id: str = ""
     index_name: str = ""
@@ -36,6 +37,11 @@ class KBInfo(BaseModel):
 
 
 class KnowledgeBaseRoles:
+    """
+    Class is responsible for creating all poloces and roles associated with KnowledgeBase creation
+    Args:
+        region_name (str): name of the AWS region
+    """
     def __init__(
         self,
         region_name: str,
