@@ -5,6 +5,36 @@ import sys
 sys.path.append("..")  # Add the parent directory to the Python path
 from utils.knowledge_bases_roles import KnowledgeBaseRoles, KBInfo
 
+def delete_bucket(bucket_name: str, s3_client: boto3.client) -> None:
+    """
+    Delete an S3 bucket and all objects within it.
+    Args:
+      bucket_name: The name of the bucket to be deleted.
+    """
+    # Get a list of all objects in the bucket
+    objects = s3_client.list_objects(Bucket=bucket_name, MaxKeys=1000)
+
+    # If the bucket is not empty
+    if 'Contents' in objects:
+        # Loop through all objects and delete them
+        while objects['Contents']:
+            # Get the list of object keys (names)
+            keys = [obj['Key'] for obj in objects['Contents']]
+
+            # Delete the objects
+            s3_client.delete_objects(Bucket=bucket_name, Delete={'Objects': [{'Key': key} for key in keys]})
+
+            # Get the next batch of objects if there are more
+            if 'NextContinuationToken' in objects:
+                objects = s3_client.list_objects(Bucket=bucket_name, MaxKeys=1000, ContinuationToken=objects['NextContinuationToken'])
+            else:
+                break
+
+    # Delete the bucket
+    s3_client.delete_bucket(Bucket=bucket_name)
+    print(f"Bucket '{bucket_name}' has been deleted successfully.")
+ 
+
 if __name__ == "__main__":
     with open("kb_info.json") as f:
         kb_info = KBInfo.parse_obj(json.load(f))
@@ -38,10 +68,4 @@ if __name__ == "__main__":
     )
 
     kb_roles.delete_iam_role_and_policies()
-
-    bucket_name = kb_info.bucket_name
-    objects = s3_client.list_objects(Bucket=bucket_name)
-    if "Contents" in objects:
-        for obj in objects["Contents"]:
-            s3_client.delete_object(Bucket=bucket_name, Key=obj["Key"])
-    s3_client.delete_bucket(Bucket=bucket_name)
+    delete_bucket(kb_info.bucket_name, s3_client)
