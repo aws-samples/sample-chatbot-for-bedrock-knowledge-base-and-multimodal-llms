@@ -1,3 +1,6 @@
+"""
+This class is copied from https://github.com/aws-samples/amazon-bedrock-workshop/blob/main/02_KnowledgeBases_and_RAG/4_CLEAN_UP.ipynb
+"""
 import json
 import boto3
 import sys

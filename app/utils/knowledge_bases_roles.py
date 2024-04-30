@@ -1,3 +1,6 @@
+"""
+This class is copied from https://github.com/aws-samples/amazon-bedrock-workshop/blob/main/02_KnowledgeBases_and_RAG/utility.py
+"""
 import json
 import random
 import time

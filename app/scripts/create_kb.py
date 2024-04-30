@@ -1,3 +1,6 @@
+"""
+This class ic copied from https://github.com/aws-samples/amazon-bedrock-workshop/blob/main/02_KnowledgeBases_and_RAG/0_create_ingest_documents_test_kb.ipynb
+"""
 import json
 import os
 import boto3
