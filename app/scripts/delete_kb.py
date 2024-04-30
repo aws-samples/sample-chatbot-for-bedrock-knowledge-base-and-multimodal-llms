@@ -5,6 +5,7 @@ This file is copied from: https://github.com/aws-samples/amazon-bedrock-workshop
 import json
 import boto3
 import sys
+
 sys.path.append("..")  # Add the parent directory to the Python path
 from utils.knowledge_bases_roles import KnowledgeBaseRoles, KBInfo
 
