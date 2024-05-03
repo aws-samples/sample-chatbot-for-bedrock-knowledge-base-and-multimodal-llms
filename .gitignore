@@ -2,6 +2,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-
+ash_output/*
 venv/*
 scripts/kb_info.json
