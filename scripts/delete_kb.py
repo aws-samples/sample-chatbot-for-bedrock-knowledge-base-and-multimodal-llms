@@ -2,11 +2,9 @@
 This class is copied from https://github.com/aws-samples/amazon-bedrock-workshop/blob/main/02_KnowledgeBases_and_RAG/4_CLEAN_UP.ipynb
 """
 import json
-import sys
 import boto3
-
-sys.path.append("..")  # Add the parent directory to the Python path
-from utils.knowledge_bases_roles import KnowledgeBaseRoles, KBInfo
+from knowledge_bases_roles import KnowledgeBaseRoles, KBInfo
+from pathlib import Path
 
 def delete_bucket(bucket_name: str, s3_client: boto3.client) -> None:
     """
@@ -29,7 +27,8 @@ def delete_bucket(bucket_name: str, s3_client: boto3.client) -> None:
  
 
 if __name__ == "__main__":
-    with open("kb_info.json", encoding="utf-8") as f:
+    path = Path(__file__).parent.absolute() # gets path of parent directory
+    with open(path / "kb_info.json", encoding="utf-8") as f:
         kb_info = KBInfo.parse_obj(json.load(f))
 
     boto3_session = boto3.session.Session(region_name=kb_info.region_name)

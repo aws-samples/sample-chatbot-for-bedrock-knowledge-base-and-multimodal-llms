@@ -1,6 +1,7 @@
 import json
 import boto3
 import streamlit as st
+from pathlib import Path
 from utils.bedrock import BedrockHandler, KBHandler
 
 
@@ -30,8 +31,8 @@ def get_all_kbs(all_kb: dict) -> dict[str, str]:
 
 
 if __name__ == "__main__":
-
-    with open("config.json", encoding="utf-8") as f:
+    path = Path(__file__).parent.absolute() # gets path of parent directory
+    with open(path / "config.json", encoding="utf-8") as f:
         configs = json.load(f)
 
     # Page title

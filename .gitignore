@@ -4,5 +4,5 @@ __pycache__/
 
 
 venv/*
-app/data/*
-app/scripts/kb_info.json
+scripts/data/*
+scripts/kb_info.json

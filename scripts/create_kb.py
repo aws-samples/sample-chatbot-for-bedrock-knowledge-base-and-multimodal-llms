@@ -5,16 +5,13 @@ import argparse
 import json
 import os
 import pprint
-import sys
 import time
 import boto3
+from pathlib import Path
 from retrying import retry
 from botocore.exceptions import ClientError
 from opensearchpy import RequestError
-
-
-sys.path.append("..")  # Add the parent directory to the Python path
-from utils.knowledge_bases_roles import interactive_sleep, KnowledgeBaseRoles, KBInfo
+from knowledge_bases_roles import interactive_sleep, KnowledgeBaseRoles, KBInfo
 
 
 class NotSupportedRegionException(Exception):
@@ -298,7 +295,7 @@ class CreateKB:
         data_source = create_ds_response["dataSource"]
         self.printer.pprint(data_source)
         bedrock_agent_client.get_data_source(
-            knowledgeBaseId=knowledge_base["knowledgeBaseId"], dataSourceId=ds["dataSourceId"]
+            knowledgeBaseId=knowledge_base["knowledgeBaseId"], dataSourceId=data_source["dataSourceId"]
         )
         self.kb_info.kb_id = knowledge_base["knowledgeBaseId"]
         self.kb_info.ds_id = data_source["dataSourceId"]
@@ -416,7 +413,7 @@ def main():
 
     # Upload data to s3 to the bucket that was configured as a data source to the knowledge base
     if not args.use_s3:
-        kb_instance.upload_directory("../data")
+        kb_instance.upload_directory(Path(__file__).parent.absolute() / "data")
 
     # Step 4: Create Knowledge Base
     kb, ds = kb_instance.create_knowledge_base(
@@ -425,8 +422,8 @@ def main():
 
     # Step 5: Start an ingestion job
     kb_instance.start_ingestion_job(bedrock_agent_client, kb, ds)
-
-    with open("kb_info.json", "w", encoding="utf-8") as file:
+    path = Path(__file__).parent.absolute() # gets path of parent directory
+    with open(path / "kb_info.json", "w", encoding="utf-8") as file:
         json.dump(
             kb_instance.kb_info.model_dump(), file, indent=4
         )  # indent=4 for pretty-printing
