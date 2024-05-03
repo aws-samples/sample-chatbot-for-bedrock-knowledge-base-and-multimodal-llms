@@ -2,8 +2,8 @@
 This class is copied from https://github.com/aws-samples/amazon-bedrock-workshop/blob/main/02_KnowledgeBases_and_RAG/4_CLEAN_UP.ipynb
 """
 import json
-import boto3
 import sys
+import boto3
 
 sys.path.append("..")  # Add the parent directory to the Python path
 from utils.knowledge_bases_roles import KnowledgeBaseRoles, KBInfo
@@ -14,39 +14,29 @@ def delete_bucket(bucket_name: str, s3_client: boto3.client) -> None:
     Args:
       bucket_name: The name of the bucket to be deleted.
     """
-    # Get a list of all objects in the bucket
     objects = s3_client.list_objects(Bucket=bucket_name, MaxKeys=1000)
-
-    # If the bucket is not empty
     if 'Contents' in objects:
-        # Loop through all objects and delete them
         while objects['Contents']:
-            # Get the list of object keys (names)
             keys = [obj['Key'] for obj in objects['Contents']]
-
-            # Delete the objects
             s3_client.delete_objects(Bucket=bucket_name, Delete={'Objects': [{'Key': key} for key in keys]})
-
-            # Get the next batch of objects if there are more
             if 'NextContinuationToken' in objects:
                 objects = s3_client.list_objects(Bucket=bucket_name, MaxKeys=1000, ContinuationToken=objects['NextContinuationToken'])
             else:
                 break
 
-    # Delete the bucket
     s3_client.delete_bucket(Bucket=bucket_name)
     print(f"Bucket '{bucket_name}' has been deleted successfully.")
  
 
 if __name__ == "__main__":
-    with open("kb_info.json") as f:
+    with open("kb_info.json", encoding="utf-8") as f:
         kb_info = KBInfo.parse_obj(json.load(f))
 
     boto3_session = boto3.session.Session(region_name=kb_info.region_name)
     bedrock_agent_client = boto3_session.client(
         "bedrock-agent", region_name=kb_info.region_name
     )
-    s3_client = boto3.client("s3", region_name=kb_info.region_name)
+    s3_client = boto3_session.client("s3")
 
     kb_roles = KnowledgeBaseRoles(
         kb_info.region_name,

@@ -1,16 +1,17 @@
 """
 This class ic copied from https://github.com/aws-samples/amazon-bedrock-workshop/blob/main/02_KnowledgeBases_and_RAG/0_create_ingest_documents_test_kb.ipynb
 """
+import argparse
 import json
 import os
-import boto3
-import sys
-import argparse
 import pprint
+import sys
 import time
+import boto3
 from retrying import retry
-from opensearchpy import RequestError
 from botocore.exceptions import ClientError
+from opensearchpy import RequestError
+
 
 sys.path.append("..")  # Add the parent directory to the Python path
 from utils.knowledge_bases_roles import interactive_sleep, KnowledgeBaseRoles, KBInfo
@@ -18,7 +19,15 @@ from utils.knowledge_bases_roles import interactive_sleep, KnowledgeBaseRoles, K
 
 class NotSupportedRegionException(Exception):
     """
-    Thrown when th script is started with a region name that is not supported by the service
+    Thrown when the script is started with a region name that is not supported by the service
+    """
+
+    pass
+
+
+class CollectionCreationException(Exception):
+    """
+    Thrown when the timeout for creating an opensearch collection expires
     """
 
     pass
@@ -26,7 +35,7 @@ class NotSupportedRegionException(Exception):
 
 class CreateKB:
     """
-    Creates Bedrock KnoweldgeBase with all the required steps
+    Creates Bedrock KnoweldgeBase
     Args:
         region_name (str): name of the AWS region
         bucket_name (str): name of the S3 bucket that will be used as a data source
@@ -69,8 +78,8 @@ class CreateKB:
         """
         try:
             s3_client.head_bucket(Bucket=self.bucket_name)
-            print(f"Bucket {self.bucket_name} Exists")
-        except ClientError as e:
+            print(f"Bucket {self.bucket_name} exists")
+        except ClientError:
             print(f"Creating bucket {self.bucket_name}")
             s3_client.create_bucket(
                 Bucket=self.bucket_name,
@@ -107,7 +116,6 @@ class CreateKB:
             bucket_name=self.bucket_name
         )
         bedrock_kb_execution_role_arn = bedrock_kb_execution_role["Role"]["Arn"]
-        # create security, network and data access policies within OSS
         encryption_policy, network_policy, access_policy = (
             self.kb_roles.create_policies_in_oss(
                 vector_store_name=self.vector_store_name,
@@ -128,33 +136,31 @@ class CreateKB:
         )
         self.printer.pprint(collection)
 
-        # Get the OpenSearch serverless collection URL
         collection_id = collection["createCollectionDetail"]["id"]
         host = collection_id + "." + self.region_name + ".aoss.amazonaws.com"
-        print(host)
         self.kb_info.collection_id = collection_id
         # wait for collection creation
         # This can take couple of minutes to finish
         response = aoss_client.batch_get_collection(names=[self.vector_store_name])
         # Periodically check collection status
+        retries = 0
         while (response["collectionDetails"][0]["status"]) == "CREATING":
             print("Creating collection...")
             interactive_sleep(30)
+            if retries > 10:
+                raise CollectionCreationException("Error creating the opensearch collection")
             response = aoss_client.batch_get_collection(names=[self.vector_store_name])
+            retries += 1
         print("\nCollection successfully created:")
         self.printer.pprint(response["collectionDetails"])
 
         # create opensearch serverless access policy and attach it to Bedrock execution role
-        try:
-            self.kb_roles.create_oss_policy_attach_bedrock_execution_role(
-                collection_id=collection_id,
-                bedrock_kb_execution_role=bedrock_kb_execution_role,
-            )
-            # It can take up to a minute for data access rules to be enforced
-            interactive_sleep(60)
-        except Exception as e:
-            print("Policy already exists")
-            self.printer.pprint(e)
+        self.kb_roles.create_oss_policy_attach_bedrock_execution_role(
+            collection_id=collection_id,
+            bedrock_kb_execution_role=bedrock_kb_execution_role,
+        )
+        # It can take up to a minute for data access rules to be enforced
+        interactive_sleep(60)
         return collection, collection_id, bedrock_kb_execution_role_arn
 
     def create_vector_index(
@@ -194,7 +200,6 @@ class CreateKB:
             },
         }
 
-        # Create index
         try:
             response = oss_client.indices.create(
                 index=self.index_name, body=json.dumps(body_json)
@@ -207,9 +212,7 @@ class CreateKB:
         except RequestError as e:
             # you can delete the index if its already exists
             # oss_client.indices.delete(index=index_name)
-            print(
-                f"Error while trying to create the index, with error {e.error}\nyou may unmark the delete above to delete, and recreate the index"
-            )
+            print(f"Error while trying to create the index, with error {e.error}\n")
 
     def create_knowledge_base(
         self,
@@ -234,21 +237,21 @@ class CreateKB:
             create_kb_response = bedrock_agent_client.create_knowledge_base(
                 name=self.kb_name,
                 description=description,
-                roleArn=roleArn,
+                roleArn=role_arn,
                 knowledgeBaseConfiguration={
                     "type": "VECTOR",
                     "vectorKnowledgeBaseConfiguration": {
-                        "embeddingModelArn": embeddingModelArn
+                        "embeddingModelArn": embedding_model_arn
                     },
                 },
                 storageConfiguration={
                     "type": "OPENSEARCH_SERVERLESS",
-                    "opensearchServerlessConfiguration": opensearchServerlessConfiguration,
+                    "opensearchServerlessConfiguration": opensearch_serverless_configuration,
                 },
             )
             return create_kb_response["knowledgeBase"]
 
-        opensearchServerlessConfiguration = {
+        opensearch_serverless_configuration = {
             "collectionArn": collection["createCollectionDetail"]["arn"],
             "vectorIndexName": self.index_name,
             "fieldMapping": {
@@ -259,7 +262,7 @@ class CreateKB:
         }
 
         # Ingest strategy - How to ingest data from the data source
-        chunkingStrategyConfiguration = {
+        chunking_strategy_configuration = {
             "chunkingStrategy": "FIXED_SIZE",
             "fixedSizeChunkingConfiguration": {
                 "maxTokens": 512,
@@ -268,41 +271,38 @@ class CreateKB:
         }
 
         # The data source to ingest documents from, into the OpenSearch serverless knowledge base index
-        s3Configuration = {
+        s3_configuration = {
             "bucketArn": f"arn:aws:s3:::{self.bucket_name}",
             # "inclusionPrefixes":["*.*"] # you can use this if you want to create a KB using data within s3 prefixes.
         }
 
         # The embedding model used by Bedrock to embed ingested documents, and realtime prompts
-        embeddingModelArn = f"arn:aws:bedrock:{self.region_name}::foundation-model/amazon.titan-embed-text-v1"
+        embedding_model_arn = f"arn:aws:bedrock:{self.region_name}::foundation-model/amazon.titan-embed-text-v1"
 
         description = "Amazon shareholder letter knowledge base."
-        roleArn = bedrock_kb_execution_role_arn
+        role_arn = bedrock_kb_execution_role_arn
 
-        try:
-            kb = create_knowledge_base_func()
-        except Exception as err:
-            print(f"{err=}, {type(err)=}")
-        self.printer.pprint(kb)
+        knowledge_base = create_knowledge_base_func()
+        self.printer.pprint(knowledge_base)
 
         # Create a DataSource in KnowledgeBase
         create_ds_response = bedrock_agent_client.create_data_source(
             name=self.kb_name,
             description=description,
-            knowledgeBaseId=kb["knowledgeBaseId"],
-            dataSourceConfiguration={"type": "S3", "s3Configuration": s3Configuration},
+            knowledgeBaseId=knowledge_base["knowledgeBaseId"],
+            dataSourceConfiguration={"type": "S3", "s3Configuration": s3_configuration},
             vectorIngestionConfiguration={
-                "chunkingConfiguration": chunkingStrategyConfiguration
+                "chunkingConfiguration": chunking_strategy_configuration
             },
         )
-        ds = create_ds_response["dataSource"]
-        self.printer.pprint(ds)
+        data_source = create_ds_response["dataSource"]
+        self.printer.pprint(data_source)
         bedrock_agent_client.get_data_source(
-            knowledgeBaseId=kb["knowledgeBaseId"], dataSourceId=ds["dataSourceId"]
+            knowledgeBaseId=knowledge_base["knowledgeBaseId"], dataSourceId=ds["dataSourceId"]
         )
-        self.kb_info.kb_id = kb["knowledgeBaseId"]
-        self.kb_info.ds_id = ds["dataSourceId"]
-        return kb, ds
+        self.kb_info.kb_id = knowledge_base["knowledgeBaseId"]
+        self.kb_info.ds_id = data_source["dataSourceId"]
+        return knowledge_base, data_source
 
     def start_ingestion_job(
         self, bedrock_agent_client: boto3.client, kb: dict, ds: dict
@@ -322,8 +322,7 @@ class CreateKB:
         job = start_job_response["ingestionJob"]
         self.printer.pprint(job)
 
-        # Get job
-        while job["status"] != "COMPLETE":
+        while job["status"] in ["IN_PROGRESS", "STARTING"]:
             get_job_response = bedrock_agent_client.get_ingestion_job(
                 knowledgeBaseId=kb["knowledgeBaseId"],
                 dataSourceId=ds["dataSourceId"],
@@ -393,17 +392,14 @@ def main():
     bedrock_agent_client = boto3_session.client(
         "bedrock-agent", region_name=region_name
     )
-    s3_client = boto3.client("s3")
+    s3_client = boto3_session.client("s3")
     aoss_client = boto3_session.client("opensearchserverless")
     s3_suffix = f"{region_name}-{boto3.client('sts').get_caller_identity()['Account']}"
     bucket_name = (
         f"bedrock-kb-{s3_suffix}" if not args.bucket_name else args.bucket_name
     )
-    vector_store_name = args.vectorstore_name
-    index_name = args.index_name
-    knowledge_base_name = args.knowledge_base_name
     kb_instance = CreateKB(
-        region_name, bucket_name, index_name, knowledge_base_name, vector_store_name
+        region_name, bucket_name, args.index_name, args.knowledge_base_name, args.vectorstore_name
     )
 
     # Step 1: Create an S3 bucket if not existing
@@ -430,7 +426,7 @@ def main():
     # Step 5: Start an ingestion job
     kb_instance.start_ingestion_job(bedrock_agent_client, kb, ds)
 
-    with open("kb_info.json", "w") as file:
+    with open("kb_info.json", "w", encoding="utf-8") as file:
         json.dump(
             kb_instance.kb_info.model_dump(), file, indent=4
         )  # indent=4 for pretty-printing

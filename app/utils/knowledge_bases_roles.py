@@ -11,8 +11,11 @@ from opensearchpy import AWSV4SignerAuth, OpenSearch, RequestsHttpConnection
 
 
 def interactive_sleep(seconds: int) -> None:
+    """
+    Sleep with prints to the user
+    """
     dots = ""
-    for i in range(seconds):
+    for _ in range(seconds):
         dots += "."
         print(dots, end="\r")
         time.sleep(1)
@@ -41,7 +44,7 @@ class KBInfo(BaseModel):
 
 class KnowledgeBaseRoles:
     """
-    Class is responsible for creating all poloces and roles associated with KnowledgeBase creation
+    Class is responsible for creating all policies and roles associated with KnowledgeBase creation
     Args:
         region_name (str): name of the AWS region
     """
@@ -159,7 +162,6 @@ class KnowledgeBaseRoles:
         )
 
         # fetch arn of the policies and role created above
-        bedrock_kb_execution_role_arn = bedrock_kb_execution_role["Role"]["Arn"]
         s3_policy_arn = s3_policy["Policy"]["Arn"]
         fm_policy_arn = fm_policy["Policy"]["Arn"]
 
@@ -331,6 +333,11 @@ class KnowledgeBaseRoles:
         return 0
 
     def create_os_client(self, collection_id: str):
+        """
+        Creates OpenSearch Client with authentication
+        Args:
+            collection_id (str): opensearch collection id
+        """
         host = collection_id + "." + self.region_name + ".aoss.amazonaws.com"
         credentials = boto3.Session().get_credentials()
         return OpenSearch(

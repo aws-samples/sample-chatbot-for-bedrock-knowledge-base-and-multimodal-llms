@@ -31,7 +31,7 @@ def get_all_kbs(all_kb: dict) -> dict[str, str]:
 
 if __name__ == "__main__":
 
-    with open("config.json") as f:
+    with open("config.json", encoding="utf-8") as f:
         configs = json.load(f)
 
     # Page title

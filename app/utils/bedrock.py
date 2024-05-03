@@ -1,3 +1,6 @@
+"""
+Handles communication to Bedrock and KnowledgeBases
+"""
 import base64
 import json
 from typing import Optional
