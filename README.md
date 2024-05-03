@@ -24,7 +24,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-3. Overwrite the `config.json` file with the your preferred parameters
+3. Overwrite the `app/config.json` file with the your preferred parameters
 
 4. If you want to create a new knoweldge base, take a look at the CLI tool `create_kb.py` in the `scripts/` folder
 ```
