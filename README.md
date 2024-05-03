@@ -1,6 +1,6 @@
-# Multimodal Chatbot with Bedrock Knowledge Base Integration
+# Multimodal Chatbot with Bedrock Knowledge Bases Integration
 
-This project is a Streamlit application that combines the capabilities of Bedrock knowledge bases with multimodal language models (LLMs). The application allows users to ask questions and receive relevant responses based on the selected knowledge base and multimodal LLM. Users can also upload images to supplement their queries.
+This project is a Streamlit application that combines the capabilities of [Amazon Bedrock Knowledge Bases](https://aws.amazon.com/bedrock/knowledge-bases/) with multimodal Large Language Models (LLMs). The application allows users to ask questions and receive relevant responses based on the selected knowledge base and multimodal LLM. Users can also upload images to supplement their queries.
 
 ![Application demo](doc/demo.gif)
 
