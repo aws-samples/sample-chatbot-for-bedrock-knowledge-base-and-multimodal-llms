@@ -9,7 +9,7 @@ This project is a Streamlit application that combines the capabilities of [Amazo
 
 1. Clone the repository:
 ```
-git clone https://github.com/aws-samples/rag-multimodal.git
+git clone https://github.com/aws-samples/bedrock-knowledgebase-multimodal.git
 cd rag-multimodal/
 ```
 
