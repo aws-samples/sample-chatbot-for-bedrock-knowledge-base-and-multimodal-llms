@@ -2,7 +2,7 @@
 This class is copied from https://github.com/aws-samples/amazon-bedrock-workshop/blob/main/02_KnowledgeBases_and_RAG/utility.py
 """
 import json
-import random
+import uuid
 import time
 import boto3
 from typing import Optional
@@ -56,7 +56,7 @@ class KnowledgeBaseRoles:
         s3_policy_name: Optional[str] = None,
         oss_policy_name: Optional[str] = None,
     ) -> None:
-        self.suffix = random.randrange(200, 900)
+        self.suffix = uuid.uuid4().hex[:6]
         self.region_name = region_name
         self.boto3_session = boto3.session.Session(region_name=self.region_name)
         self.iam_client = self.boto3_session.client("iam")

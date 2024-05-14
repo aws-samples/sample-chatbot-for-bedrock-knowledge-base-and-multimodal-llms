@@ -36,16 +36,18 @@ If you want to upload documents from local to the KnowledgeBase, add the documen
 
 5. [Optional] You can delete the created knowledgeBase from setp 4 with the following script:
 ```
-python scripts/delete_kb.py
+python scripts/delete_kb.py --knowledge_base_name <your-kb-name>
 ```
 
 ## Usage
-1. Ensure your terminal session can access the AWS account via SSO, environment variables or any mechanism you use
+1. [Only once] Go to AWS Console. Go to Amazon Bedrock console and on left menu, click on Model access:
+    * On the Model access screen, click on top right button "Manage model access":
+    * On model access screen, select the Claude 3 models (Haiku, Sonnet, Opus) and click on "Request model access" button
 
-2. Start the Streamlit application:
+2. Ensure your terminal session can access the AWS account via SSO, environment variables or any mechanism you use
+3. Start the Streamlit application:
 
 ```
 streamlit run app/main.py
-
 ```
 

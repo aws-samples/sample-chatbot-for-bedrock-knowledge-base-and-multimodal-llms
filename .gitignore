@@ -4,4 +4,4 @@ __pycache__/
 
 ash_output/*
 venv/*
-scripts/kb_info.json
+scripts/*.json

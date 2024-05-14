@@ -7,6 +7,7 @@ import os
 import pprint
 import time
 import boto3
+import uuid
 from pathlib import Path
 from retrying import retry
 from botocore.exceptions import ClientError
@@ -25,6 +26,14 @@ class NotSupportedRegionException(Exception):
 class CollectionCreationException(Exception):
     """
     Thrown when the timeout for creating an opensearch collection expires
+    """
+
+    pass
+
+
+class KnowledgeBaseCreationException(Exception):
+    """
+    Thrown when the timeout for creating a Bedrock KnowledgeBase expires
     """
 
     pass
@@ -134,7 +143,6 @@ class CreateKB:
         self.printer.pprint(collection)
 
         collection_id = collection["createCollectionDetail"]["id"]
-        host = collection_id + "." + self.region_name + ".aoss.amazonaws.com"
         self.kb_info.collection_id = collection_id
         # wait for collection creation
         # This can take couple of minutes to finish
@@ -144,7 +152,7 @@ class CreateKB:
         while (response["collectionDetails"][0]["status"]) == "CREATING":
             print("Creating collection...")
             interactive_sleep(30)
-            if retries > 10:
+            if retries > 20:
                 raise CollectionCreationException("Error creating the opensearch collection")
             response = aoss_client.batch_get_collection(names=[self.vector_store_name])
             retries += 1
@@ -199,7 +207,7 @@ class CreateKB:
 
         try:
             response = oss_client.indices.create(
-                index=self.index_name, body=json.dumps(body_json)
+                index=self.index_name, body=json.dumps(body_json), params={"timeout": 300}
             )
             print("\nCreating index:")
             self.printer.pprint(response)
@@ -233,7 +241,6 @@ class CreateKB:
         def create_knowledge_base_func():
             create_kb_response = bedrock_agent_client.create_knowledge_base(
                 name=self.kb_name,
-                description=description,
                 roleArn=role_arn,
                 knowledgeBaseConfiguration={
                     "type": "VECTOR",
@@ -275,8 +282,6 @@ class CreateKB:
 
         # The embedding model used by Bedrock to embed ingested documents, and realtime prompts
         embedding_model_arn = f"arn:aws:bedrock:{self.region_name}::foundation-model/amazon.titan-embed-text-v1"
-
-        description = "Amazon shareholder letter knowledge base."
         role_arn = bedrock_kb_execution_role_arn
 
         knowledge_base = create_knowledge_base_func()
@@ -285,7 +290,6 @@ class CreateKB:
         # Create a DataSource in KnowledgeBase
         create_ds_response = bedrock_agent_client.create_data_source(
             name=self.kb_name,
-            description=description,
             knowledgeBaseId=knowledge_base["knowledgeBaseId"],
             dataSourceConfiguration={"type": "S3", "s3Configuration": s3_configuration},
             vectorIngestionConfiguration={
@@ -297,6 +301,17 @@ class CreateKB:
         bedrock_agent_client.get_data_source(
             knowledgeBaseId=knowledge_base["knowledgeBaseId"], dataSourceId=data_source["dataSourceId"]
         )
+
+        kb_respone = bedrock_agent_client.get_knowledge_base(knowledgeBaseId=knowledge_base["knowledgeBaseId"])
+        retries = 0
+        while kb_respone["knowledgeBase"]["status"] == "CREATING":
+            interactive_sleep(30)
+            kb_respone  = bedrock_agent_client.get_knowledge_base(knowledgeBaseId=knowledge_base["knowledgeBaseId"])
+            retries += 1
+            if retries > 20:
+                raise KnowledgeBaseCreationException("Failed to create knowledge base")
+
+
         self.kb_info.kb_id = knowledge_base["knowledgeBaseId"]
         self.kb_info.ds_id = data_source["dataSourceId"]
         return knowledge_base, data_source
@@ -336,6 +351,7 @@ class CreateKB:
 
 
 def main():
+    suffix = uuid.uuid4().hex[:6]
     parser = argparse.ArgumentParser(
         description="Create and ingest documents into a knowledge base, by default files will be copied from ../data directory to the provided S3 location"
     )
@@ -366,14 +382,14 @@ def main():
         type=str,
         required=False,
         help="Name of the vector store",
-        default="bedrock-sample-rag-vs",
+        default=f"bedrock-sample-rag-vs-{suffix}",
     )
     parser.add_argument(
         "--index_name",
         type=str,
         required=False,
         help="Name of the opensearch index",
-        default="bedrock-sample-rag-index",
+        default=f"bedrock-sample-rag-index-{suffix}",
     )
 
     args = parser.parse_args()
@@ -423,7 +439,7 @@ def main():
     # Step 5: Start an ingestion job
     kb_instance.start_ingestion_job(bedrock_agent_client, kb, ds)
     path = Path(__file__).parent.absolute() # gets path of parent directory
-    with open(path / "kb_info.json", "w", encoding="utf-8") as file:
+    with open(path / f"{args.knowledge_base_name}.json", "w", encoding="utf-8") as file:
         json.dump(
             kb_instance.kb_info.model_dump(), file, indent=4
         )  # indent=4 for pretty-printing
