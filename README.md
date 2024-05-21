@@ -10,7 +10,7 @@ This project is a Streamlit application that combines the capabilities of [Amazo
 1. Clone the repository:
 ```
 git clone https://github.com/aws-samples/bedrock-knowledgebase-multimodal.git
-cd rag-multimodal/
+cd bedrock-knowledgebase-multimodal/
 ```
 
 2. Create and activate a virtual environment
