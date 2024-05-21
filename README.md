@@ -1,4 +1,4 @@
-# Multimodal Chatbot with Bedrock Knowledge Bases Integration
+# Multimodal Chatbot with Amazon Bedrock Knowledge Bases Integration
 
 This project is a Streamlit application that combines the capabilities of [Amazon Bedrock Knowledge Bases](https://aws.amazon.com/bedrock/knowledge-bases/) with multimodal Large Language Models (LLMs). The application allows users to ask questions and receive relevant responses based on the selected knowledge base and multimodal LLM. Users can also upload images to supplement their queries.
 
@@ -9,8 +9,8 @@ This project is a Streamlit application that combines the capabilities of [Amazo
 
 1. Clone the repository:
 ```
-git clone https://github.com/aws-samples/bedrock-knowledgebase-multimodal.git
-cd bedrock-knowledgebase-multimodal/
+git clone https://github.com/aws-samples/amazon-bedrock-knowledgebases-multimodal.git
+cd amazon-bedrock-knowledgebases-multimodal/
 ```
 
 2. Create and activate a virtual environment
