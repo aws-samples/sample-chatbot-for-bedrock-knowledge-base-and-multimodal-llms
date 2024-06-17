@@ -19,7 +19,6 @@ def interactive_sleep(seconds: int) -> None:
         dots += "."
         print(dots, end="\r")
         time.sleep(1)
-    print("Done!")
 
 
 class KBInfo(BaseModel):

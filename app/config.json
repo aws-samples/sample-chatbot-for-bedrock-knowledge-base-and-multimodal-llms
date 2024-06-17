@@ -1,7 +1,7 @@
 {
     "page_title": "Bedrock KnowledgeBases with Multimodal LLMs",
     "start_message": "I am a GenAI powered chatbot, how can I help you?",
-    "bedrock_region": "us-west-2",
+    "bedrock_region": "eu-central-1",
     "claude_model_params": {
         "anthropic_version": "bedrock-2023-05-31",
         "max_tokens": 4096,

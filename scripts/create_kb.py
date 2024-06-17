@@ -23,14 +23,6 @@ class NotSupportedRegionException(Exception):
     pass
 
 
-class CollectionCreationException(Exception):
-    """
-    Thrown when the timeout for creating an opensearch collection expires
-    """
-
-    pass
-
-
 class KnowledgeBaseCreationException(Exception):
     """
     Thrown when the timeout for creating a Bedrock KnowledgeBase expires
@@ -148,14 +140,10 @@ class CreateKB:
         # This can take couple of minutes to finish
         response = aoss_client.batch_get_collection(names=[self.vector_store_name])
         # Periodically check collection status
-        retries = 0
         while (response["collectionDetails"][0]["status"]) == "CREATING":
             print("Creating collection...")
             interactive_sleep(30)
-            if retries > 20:
-                raise CollectionCreationException("Error creating the opensearch collection")
             response = aoss_client.batch_get_collection(names=[self.vector_store_name])
-            retries += 1
         print("\nCollection successfully created:")
         self.printer.pprint(response["collectionDetails"])
 
@@ -360,7 +348,7 @@ def main():
         type=str,
         required=False,
         help="AWS region name",
-        default="us-west-2",
+        default="eu-central-1",
     )
     parser.add_argument(
         "--knowledge_base_name", type=str, required=True, help="Knowledge base name"
@@ -395,9 +383,10 @@ def main():
     args = parser.parse_args()
 
     region_name = args.region_name
-    if region_name not in ["us-east-1", "us-west-2"]:
+    allowed_regions = ["us-east-1", "us-west-2", "ap-south-1", "ap-southeast-2", "ca-central-1", "eu-central-1", "eu-west-1", "eu-west-2", "eu-west-3"]
+    if region_name not in allowed_regions:
         raise NotSupportedRegionException(
-            "The region for needs to be sit to us-east-1 or us-west-2"
+            f"The region for needs to be set to one of {allowed_regions}"
         )
 
     boto3.setup_default_session(region_name=region_name)
