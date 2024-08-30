@@ -1,6 +1,7 @@
 """
 This class is copied from https://github.com/aws-samples/amazon-bedrock-workshop/blob/main/02_KnowledgeBases_and_RAG/utility.py
 """
+
 import json
 import uuid
 import time
@@ -47,6 +48,7 @@ class KnowledgeBaseRoles:
     Args:
         region_name (str): name of the AWS region
     """
+
     def __init__(
         self,
         region_name: str,

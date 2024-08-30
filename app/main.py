@@ -31,7 +31,7 @@ def get_all_kbs(all_kb: dict) -> dict[str, str]:
 
 
 if __name__ == "__main__":
-    path = Path(__file__).parent.absolute() # gets path of parent directory
+    path = Path(__file__).parent.absolute()  # gets path of parent directory
     with open(path / "config.json", encoding="utf-8") as f:
         configs = json.load(f)
 
@@ -49,7 +49,7 @@ if __name__ == "__main__":
         st.title(configs["page_title"])
         streaming_on = st.toggle("Streaming", value=True)
         uploaded_files = st.file_uploader(
-            "Choose one or more images", accept_multiple_files=True, type=["png", "jpg"]
+            "Choose one or more images", accept_multiple_files=True
         )
         selected_bedrock_model = st.selectbox(
             "Choose Bedrock model", configs["multimodal_llms"].keys(), index=1
@@ -101,7 +101,7 @@ if __name__ == "__main__":
         docs = retriever.get_relevant_docs(prompt)
         context = retriever.parse_kb_output_to_string(docs)
         st.session_state.bedrock_messages.append(
-            bedrock_handler.user_message(prompt, context, uploaded_pics=uploaded_files)
+            bedrock_handler.user_message(prompt, context, uploaded_files=uploaded_files)
         )
         full_response = ""
         if streaming_on:
@@ -109,25 +109,21 @@ if __name__ == "__main__":
                 placeholder = st.empty()
                 stream = bedrock_handler.invoke_model_with_stream(
                     st.session_state.bedrock_messages
-                ).get("body")
-                for event in stream:
-                    chunk = event.get("chunk")
-                    if chunk:
-                        chunk_message = json.loads(chunk.get("bytes").decode())
-                        full_response += BedrockHandler.get_body_from_stream_chunks(
-                            chunk_message
-                        )
+                ).get("stream")
+                if stream:
+                    for event in stream:
+                        if "contentBlockDelta" in event:
+                            full_response += event["contentBlockDelta"]["delta"]["text"]
                         placeholder.markdown(full_response)
-                placeholder.markdown(full_response)
-                with st.expander("Show source details >"):
-                    st.write(retriever.parse_kb_output_to_reference(docs))
+                    placeholder.markdown(full_response)
+                    with st.expander("Show source details >"):
+                        st.write(retriever.parse_kb_output_to_reference(docs))
         else:
             with st.chat_message("assistant"):
                 response = bedrock_handler.invoke_model(
                     st.session_state.bedrock_messages
                 )
-                response_body = json.loads(response.get("body").read())
-                full_response = response_body["content"][0]["text"]
+                full_response = response["output"]["message"]["content"][0]["text"]
                 st.write(full_response)
                 with st.expander("Show source details >"):
                     st.write(retriever.parse_kb_output_to_reference(docs))

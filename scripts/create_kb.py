@@ -1,6 +1,7 @@
 """
 This class ic copied from https://github.com/aws-samples/amazon-bedrock-workshop/blob/main/02_KnowledgeBases_and_RAG/0_create_ingest_documents_test_kb.ipynb
 """
+
 import argparse
 import json
 import os
@@ -13,6 +14,29 @@ from retrying import retry
 from botocore.exceptions import ClientError
 from opensearchpy import RequestError
 from knowledge_bases_roles import interactive_sleep, KnowledgeBaseRoles, KBInfo
+
+
+CHUNKING_STRATEGIES = {
+    "FIXED_SIZE": {
+        "fixedSizeChunkingConfiguration": {
+            "maxTokens": "512",
+            "overlapPercentage": "20",
+        }
+    },
+    "HIERARCHICAL": {
+        "hierarchicalChunkingConfiguration": {
+            "levelConfigurations": [{"maxTokens": 1500}, {"maxTokens": 300}],
+            "overlapTokens": 60,
+        }
+    },
+    "SEMANTIC": {
+        "semanticChunkingConfiguration": {
+            "maxTokens": 512,
+            "bufferSize": 1,
+            "breakpointPercentileThreshold": 95,
+        }
+    },
+}
 
 
 class NotSupportedRegionException(Exception):
@@ -195,7 +219,9 @@ class CreateKB:
 
         try:
             response = oss_client.indices.create(
-                index=self.index_name, body=json.dumps(body_json), params={"timeout": 300}
+                index=self.index_name,
+                body=json.dumps(body_json),
+                params={"timeout": 300},
             )
             print("\nCreating index:")
             self.printer.pprint(response)
@@ -212,6 +238,7 @@ class CreateKB:
         collection: dict,
         bedrock_kb_execution_role_arn: str,
         bedrock_agent_client: boto3.client,
+        chunking_strategy: str,
     ) -> tuple[dict, dict]:
         """
         Create a Knowledge Base and a Data Source within the Knowledge Base.
@@ -255,11 +282,8 @@ class CreateKB:
 
         # Ingest strategy - How to ingest data from the data source
         chunking_strategy_configuration = {
-            "chunkingStrategy": "FIXED_SIZE",
-            "fixedSizeChunkingConfiguration": {
-                "maxTokens": 512,
-                "overlapPercentage": 20,
-            },
+            "chunkingStrategy": chunking_strategy,
+            **CHUNKING_STRATEGIES[chunking_strategy],
         }
 
         # The data source to ingest documents from, into the OpenSearch serverless knowledge base index
@@ -287,18 +311,22 @@ class CreateKB:
         data_source = create_ds_response["dataSource"]
         self.printer.pprint(data_source)
         bedrock_agent_client.get_data_source(
-            knowledgeBaseId=knowledge_base["knowledgeBaseId"], dataSourceId=data_source["dataSourceId"]
+            knowledgeBaseId=knowledge_base["knowledgeBaseId"],
+            dataSourceId=data_source["dataSourceId"],
         )
 
-        kb_respone = bedrock_agent_client.get_knowledge_base(knowledgeBaseId=knowledge_base["knowledgeBaseId"])
+        kb_respone = bedrock_agent_client.get_knowledge_base(
+            knowledgeBaseId=knowledge_base["knowledgeBaseId"]
+        )
         retries = 0
         while kb_respone["knowledgeBase"]["status"] == "CREATING":
             interactive_sleep(30)
-            kb_respone  = bedrock_agent_client.get_knowledge_base(knowledgeBaseId=knowledge_base["knowledgeBaseId"])
+            kb_respone = bedrock_agent_client.get_knowledge_base(
+                knowledgeBaseId=knowledge_base["knowledgeBaseId"]
+            )
             retries += 1
             if retries > 20:
                 raise KnowledgeBaseCreationException("Failed to create knowledge base")
-
 
         self.kb_info.kb_id = knowledge_base["knowledgeBaseId"]
         self.kb_info.ds_id = data_source["dataSourceId"]
@@ -362,7 +390,7 @@ def main():
     parser.add_argument(
         "--use_s3",
         required=False,
-        help="If set, we use the files in the provided S3 location without copying ../data location",
+        help="If set, we use the files in the provided S3 location (in --bukcet_name) without copying ../data location",
         default=False,
     )
     parser.add_argument(
@@ -379,15 +407,34 @@ def main():
         help="Name of the opensearch index",
         default=f"bedrock-sample-rag-index-{suffix}",
     )
+    parser.add_argument(
+        "--chunking_strategy",
+        type=str,
+        required=False,
+        help=f"Chunking strategy, choice of {CHUNKING_STRATEGIES.keys()}",
+        default=f"FIXED_SIZE",
+    )
 
     args = parser.parse_args()
 
     region_name = args.region_name
-    allowed_regions = ["us-east-1", "us-west-2", "ap-south-1", "ap-southeast-2", "ca-central-1", "eu-central-1", "eu-west-1", "eu-west-2", "eu-west-3"]
+    allowed_regions = [
+        "us-east-1",
+        "us-west-2",
+        "ap-south-1",
+        "ap-southeast-2",
+        "ca-central-1",
+        "eu-central-1",
+        "eu-west-1",
+        "eu-west-2",
+        "eu-west-3",
+    ]
     if region_name not in allowed_regions:
         raise NotSupportedRegionException(
             f"The region for needs to be set to one of {allowed_regions}"
         )
+    if args.chunking_strategy not in CHUNKING_STRATEGIES.keys():
+        raise Exception("Un supported chunking strategy")
 
     boto3.setup_default_session(region_name=region_name)
     boto3_session = boto3.session.Session(region_name=region_name)
@@ -401,7 +448,11 @@ def main():
         f"bedrock-kb-{s3_suffix}" if not args.bucket_name else args.bucket_name
     )
     kb_instance = CreateKB(
-        region_name, bucket_name, args.index_name, args.knowledge_base_name, args.vectorstore_name
+        region_name,
+        bucket_name,
+        args.index_name,
+        args.knowledge_base_name,
+        args.vectorstore_name,
     )
 
     # Step 1: Create an S3 bucket if not existing
@@ -422,12 +473,15 @@ def main():
 
     # Step 4: Create Knowledge Base
     kb, ds = kb_instance.create_knowledge_base(
-        collection, bedrock_kb_execution_role_arn, bedrock_agent_client
+        collection,
+        bedrock_kb_execution_role_arn,
+        bedrock_agent_client,
+        args.chunking_strategy,
     )
 
     # Step 5: Start an ingestion job
     kb_instance.start_ingestion_job(bedrock_agent_client, kb, ds)
-    path = Path(__file__).parent.absolute() # gets path of parent directory
+    path = Path(__file__).parent.absolute()  # gets path of parent directory
     with open(path / f"{args.knowledge_base_name}.json", "w", encoding="utf-8") as file:
         json.dump(
             kb_instance.kb_info.model_dump(), file, indent=4

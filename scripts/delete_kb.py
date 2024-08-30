@@ -1,11 +1,13 @@
 """
 This class is copied from https://github.com/aws-samples/amazon-bedrock-workshop/blob/main/02_KnowledgeBases_and_RAG/4_CLEAN_UP.ipynb
 """
+
 import argparse
 import json
 import boto3
 from knowledge_bases_roles import KnowledgeBaseRoles, KBInfo
 from pathlib import Path
+
 
 def delete_bucket(bucket_name: str, s3_client: boto3.client) -> None:
     """
@@ -14,18 +16,24 @@ def delete_bucket(bucket_name: str, s3_client: boto3.client) -> None:
       bucket_name: The name of the bucket to be deleted.
     """
     objects = s3_client.list_objects(Bucket=bucket_name, MaxKeys=1000)
-    if 'Contents' in objects:
-        while objects['Contents']:
-            keys = [obj['Key'] for obj in objects['Contents']]
-            s3_client.delete_objects(Bucket=bucket_name, Delete={'Objects': [{'Key': key} for key in keys]})
-            if 'NextContinuationToken' in objects:
-                objects = s3_client.list_objects(Bucket=bucket_name, MaxKeys=1000, ContinuationToken=objects['NextContinuationToken'])
+    if "Contents" in objects:
+        while objects["Contents"]:
+            keys = [obj["Key"] for obj in objects["Contents"]]
+            s3_client.delete_objects(
+                Bucket=bucket_name, Delete={"Objects": [{"Key": key} for key in keys]}
+            )
+            if "NextContinuationToken" in objects:
+                objects = s3_client.list_objects(
+                    Bucket=bucket_name,
+                    MaxKeys=1000,
+                    ContinuationToken=objects["NextContinuationToken"],
+                )
             else:
                 break
 
     s3_client.delete_bucket(Bucket=bucket_name)
     print(f"Bucket '{bucket_name}' has been deleted successfully.")
- 
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -35,7 +43,7 @@ if __name__ == "__main__":
         "--knowledge_base_name", type=str, required=True, help="Knowledge base name"
     )
     args = parser.parse_args()
-    path = Path(__file__).parent.absolute() # gets path of parent directory
+    path = Path(__file__).parent.absolute()  # gets path of parent directory
     with open(path / f"{args.knowledge_base_name}.json", encoding="utf-8") as f:
         kb_info = KBInfo.parse_obj(json.load(f))
 

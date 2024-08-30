@@ -1,9 +1,11 @@
 """
 Handles communication to Bedrock and KnowledgeBases
 """
+
 import base64
 import json
 from typing import Optional
+from pathlib import Path
 
 
 class BedrockHandler:
@@ -35,13 +37,13 @@ class BedrockHandler:
         Returns:
             dict: A message dictionary with the role set to "assistant" and the content set to the provided message.
         """
-        return {"role": "assistant", "content": [{"type": "text", "text": message}]}
+        return {"role": "assistant", "content": [{"text": message}]}
 
     @staticmethod
     def user_message(
         message: str,
         context: Optional[str] = None,
-        uploaded_pics: Optional[list] = None,
+        uploaded_files: Optional[list] = None,
     ) -> dict:
         """
         Create a message dictionary representing a user's query, optionally including context and uploaded images.
@@ -62,24 +64,36 @@ class BedrockHandler:
         )
         new_message = {
             "role": "user",
-            "content": [
-                {"type": "text", "text": f"{context_message} question: {message}"}
-            ],
+            "content": [{"text": f"{context_message} question: {message}"}],
         }
-        if uploaded_pics:
-            for uploaded_pic in uploaded_pics:
-                bytes_data = uploaded_pic.read()
-                img_base64 = base64.b64encode(bytes_data).decode("utf-8")
-                new_message["content"].append(
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "image/png",
-                            "data": img_base64,
-                        },
-                    }
-                )
+        if uploaded_files:
+            for uploaded_file in uploaded_files:
+                bytes_data = uploaded_file.read()
+                extension = Path(uploaded_file.name).suffix[1:]
+                print(extension)
+                if extension in ["png", "jpeg", "gif", "webp"]:
+                    new_message["content"].append(
+                        {
+                            "image": {
+                                "format": extension,
+                                "source": {
+                                    "bytes": bytes_data,
+                                },
+                            }
+                        }
+                    )
+                elif extension in ["pdf", "csv", "doc", "docx", "xls", "xlsx", "html", "txt","md"]:
+                    new_message["content"].append(
+                        {
+                            "document": {
+                                "format": extension,
+                                "name": "random-doc-name",
+                                "source": {
+                                    "bytes": bytes_data,
+                                },
+                            }
+                        }
+                    )
         return new_message
 
     def invoke_model(self, messages: list) -> dict:
@@ -92,12 +106,11 @@ class BedrockHandler:
         Returns:
             dict: The response from the Bedrock model.
         """
-        body = json.dumps(self.params | {"messages": messages})
-        return self.client.invoke_model(
+        return self.client.converse(
             modelId=self.model_id,
-            contentType="application/json",
-            accept="application/json",
-            body=body,
+            messages=messages,
+            inferenceConfig={"temperature": 0.0},
+            additionalModelRequestFields={"top_k": 100},
         )
 
     def invoke_model_with_stream(self, messages: list) -> dict:
@@ -110,28 +123,12 @@ class BedrockHandler:
         Returns:
             dict: The streaming response from the Bedrock model.
         """
-        body = json.dumps(self.params | {"messages": messages})
-        return self.client.invoke_model_with_response_stream(
+        return self.client.converse_stream(
             modelId=self.model_id,
-            contentType="application/json",
-            accept="application/json",
-            body=body,
+            messages=messages,
+            inferenceConfig={"temperature": 0.0},
+            additionalModelRequestFields={"top_k": 100},
         )
-
-    @staticmethod
-    def get_body_from_stream_chunks(chunk: dict) -> str:
-        """
-        Extract the text content from a stream chunk.
-
-        Args:
-            chunk (dict): A dictionary representing a stream chunk.
-
-        Returns:
-            str: The text content from the stream chunk, or an empty string if no text is present.
-        """
-        if "delta" in chunk and "text" in chunk["delta"]:
-            return chunk["delta"]["text"]
-        return ""
 
 
 class KBHandler:
