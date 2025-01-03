@@ -8,10 +8,44 @@
         "temperature": 0.0,
         "top_k": 100
     },
+    "nova_model_params": {
+        "temperature": 0.0,
+        "maxTokens": 4096,
+        "topP": 0.9
+    },
+    "nova_canvas_params": {
+        "cfgScale": 8.0,
+        "seed": 42,
+        "quality": "standard",
+        "width": 1280,
+        "height": 720,
+        "numberOfImages": 1
+    },
+    "nova_reel_params": {
+        "durationSeconds": 6,
+        "fps": 24,
+        "dimension": "1280x720"
+    },
     "kb_configs": {"vectorSearchConfiguration": {"numberOfResults": 5}},
     "multimodal_llms": {
-        "Anthropic Claude 3 Haiku": "anthropic.claude-3-haiku-20240307-v1:0",
-        "Anthropic Claude 3 Sonnet": "anthropic.claude-3-sonnet-20240229-v1:0",
-        "Anthropic Claude 3.5 Sonnet": "anthropic.claude-3-5-sonnet-20240620-v1:0"
+        "Frankfurt": {
+            "Anthropic Claude 3 Haiku": "anthropic.claude-3-haiku-20240307-v1:0",
+            "Anthropic Claude 3 Sonnet": "anthropic.claude-3-sonnet-20240229-v1:0",
+            "Anthropic Claude 3.5 Sonnet": "anthropic.claude-3-5-sonnet-20240620-v1:0"
+        },
+        "N. Virginia": {
+            "Anthropic Claude 3 Haiku": "anthropic.claude-3-haiku-20240307-v1:0",
+            "Anthropic Claude 3 Sonnet": "anthropic.claude-3-sonnet-20240229-v1:0",
+            "Anthropic Claude 3.5 Sonnet": "anthropic.claude-3-5-sonnet-20240620-v1:0",
+            "Amazon Nova Micro": "amazon.nova-micro-v1:0",
+            "Amazon Nova Lite": "amazon.nova-lite-v1:0",
+            "Amazon Nova Pro": "amazon.nova-pro-v1:0",
+            "(Image) Amazon Nova Canvas": "amazon.nova-canvas-v1:0",
+            "(Video) Amazon Nova Reel": "amazon.nova-reel-v1:0"
+        }
+    },
+    "regions": {
+        "Frankfurt": "eu-central-1",
+        "N. Virginia": "us-east-1"
     }
 }

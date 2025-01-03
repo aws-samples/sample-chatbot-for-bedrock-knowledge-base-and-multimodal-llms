@@ -4,9 +4,10 @@ Handles communication to Bedrock and KnowledgeBases
 
 import base64
 import json
-from typing import Optional
+from typing import Optional, Union
 from pathlib import Path
-
+import streamlit as st
+import io
 
 class BedrockHandler:
     """
@@ -25,9 +26,11 @@ class BedrockHandler:
         self.params = params
         self.model_id = model_id
         self.client = client
+        self.is_image_model = "nova-canvas" in model_id
+        self.is_video_model = "nova-reel" in model_id
 
     @staticmethod
-    def assistant_message(message: str) -> dict:
+    def assistant_message(message: str, image_data: Optional[bytes] = None) -> dict:
         """
         Create a message dictionary representing an assistant's response.
 
@@ -37,7 +40,11 @@ class BedrockHandler:
         Returns:
             dict: A message dictionary with the role set to "assistant" and the content set to the provided message.
         """
-        return {"role": "assistant", "content": [{"text": message}]}
+        content = [{"text": message}]
+        if image_data:
+            content.append({"image": image_data})
+        return {"role": "assistant", "content": content}
+        # return {"role": "assistant", "content": [{"text": message}]}
 
     @staticmethod
     def user_message(
@@ -95,8 +102,57 @@ class BedrockHandler:
                         }
                     )
         return new_message
+    
+    
+    def generate_image(self, prompt: str) -> bytes: 
+        """
+        Invoke the Amazon Nova Canvas model with the provided messages and return the image.
 
-    def invoke_model(self, messages: list) -> dict:
+        Args:
+            prompt (str): A prompt to generate the image.
+
+        Returns:
+            image: The base64 decoded image response from the Amazon Nova Canvas model.
+        """
+        body = { 
+                "taskType": "TEXT_IMAGE",
+                "textToImageParams": { "text": prompt },
+                "imageGenerationConfig": self.params
+                }
+        response = self.client.invoke_model(
+            modelId=self.model_id,
+            body=json.dumps(body)
+        )
+        
+        response_body = json.loads(response['body'].read())
+        image_data = base64.b64decode(response_body['images'][0])
+        return image_data
+    
+    def generate_video(self, prompt: str, s3_uri: str) -> dict:
+        """
+        Invoke the Amazon Nova Reel model with the provided messages to generate a video.
+
+        Args:
+            prompt (str): A prompt to generate the video.
+
+        Returns:
+            Void: No return as Video has to be downloaded from provided S3 location.
+        """
+        response = self.client.start_async_invoke(
+            modelInput={
+                "taskType": "TEXT_VIDEO",
+                "textToVideoParams": {"text": prompt},
+                "videoGenerationConfig": self.params,
+                },
+            modelId=self.model_id,
+            outputDataConfig={
+                "s3OutputDataConfig": {
+                    "s3Uri": s3_uri
+                }
+            }
+        )
+    
+    def invoke_model(self, messages: list) -> Union[dict, bytes]:
         """
         Invoke the Bedrock model with the provided messages and return the response.
 
@@ -106,12 +162,21 @@ class BedrockHandler:
         Returns:
             dict: The response from the Bedrock model.
         """
-        return self.client.converse(
-            modelId=self.model_id,
-            messages=messages,
-            inferenceConfig={"temperature": 0.0},
-            additionalModelRequestFields={"top_k": 100},
-        )
+        try:
+            if self.is_image_model:
+                return self.generate_image(messages[-1]["content"][0]["text"])
+            elif self.is_video_model:
+                return self.generate_video(messages[-1]["content"][0]["text"], messages[-1].get("s3_uri"))
+            else:
+                return self.client.converse(
+                    modelId=self.model_id,
+                    messages=messages,
+                    inferenceConfig={"temperature": 0.0},
+                    additionalModelRequestFields={"top_k": 100} if "anthropic" in self.model_id else {}           
+                )
+        except Exception as e:
+            st.error(f"Error invoking model: {str(e)}")
+            return None
 
     def invoke_model_with_stream(self, messages: list) -> dict:
         """
@@ -123,11 +188,13 @@ class BedrockHandler:
         Returns:
             dict: The streaming response from the Bedrock model.
         """
+        if self.is_image_model or self.is_video_model:
+            raise ValueError("Streaming is not supported for image or video generation models")
         return self.client.converse_stream(
             modelId=self.model_id,
             messages=messages,
             inferenceConfig={"temperature": 0.0},
-            additionalModelRequestFields={"top_k": 100},
+            additionalModelRequestFields={"top_k": 100} if "anthropic" in self.model_id else {}
         )
 
 
