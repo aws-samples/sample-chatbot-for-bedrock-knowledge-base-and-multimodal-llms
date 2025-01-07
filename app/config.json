@@ -15,7 +15,6 @@
     },
     "nova_canvas_params": {
         "cfgScale": 8.0,
-        "seed": 42,
         "quality": "standard",
         "width": 1280,
         "height": 720,
