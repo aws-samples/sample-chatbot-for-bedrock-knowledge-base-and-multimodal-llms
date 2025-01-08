@@ -25,11 +25,16 @@ pip install -r requirements.txt
 ```
 
 4. Go to AWS Console. Go to Amazon Bedrock console and on left menu, click on Model access:
-    * On the Model access screen, click on top right button "Modify model access":
-    * On model access screen, select Titan Embeddings G1 - Text and Claude 3 models (Haiku, Sonnet, Opus), and click on "Request model access" button
+    * Access to Claude Models:
+       * On the Model access screen, click on button "Modify model access":
+       * On "edit model access" screen, select Titan Embeddings G1 - Text and Claude 3 models (Haiku, Sonnet, Opus), and click on "Request model access" button
+   * Access to Nova Models:
+      * Select region "us-east-1" in the AWS console
+      * On the Model access screen, click on button "Modify model access":
+      * On "edit model access" screen, select Nova Micro, Nova Lite, Nova Pro, Nova Canvas and Nova Reel
 
 
-5. If you want to create a new knoweldge base, take a look at the CLI tool `create_kb.py` in the `scripts/` folder
+6. If you want to create a new knoweldge base, take a look at the CLI tool `create_kb.py` in the `scripts/` folder
 ```
 python scripts/create_kb.py --help 
 ```
