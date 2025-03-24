@@ -1,5 +1,6 @@
 import base64
 import json
+import uuid
 from typing import Optional, Union, Dict, List, Any
 from pathlib import Path
 import boto3
@@ -97,7 +98,7 @@ class BedrockHandler:
                     new_message["content"].append({
                         "document": {
                             "format": extension,
-                            "name": "random-doc-name",
+                            "name": f"doc-{uuid.uuid4().hex[:8]}",
                             "source": {"bytes": bytes_data}
                         }
                     })
